@@ -11,6 +11,7 @@ Sorry for the code
   
 Использование <br/>
 <code>py api.py</code><br/>
+либо клацаем два раза по <i>run.bat</i> <br/>
 
 API_ID и API_HASH берем из <code>https://my.telegram.org/apps</code> (создай приложение, убедись что выключен VPN)<br/>
 BOT_TOKENS берем из BotFather в телеграмм
