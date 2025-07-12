@@ -38,7 +38,7 @@ def printInfo(info,full,bio,file,extra):
             file.write(f"{key}: {extra[key]}\n")
         if keys is None:
             file.write("\n")
-        print(f"Data for @{info.username or info.id} saved to user_info.txt")
+        print(f"Data for @{info.username or info.id} saved to {resultFile}")
 
     except Exception as e:
         file.write(f"Error for @{info.username or info.id}: {str(e)}\n")
