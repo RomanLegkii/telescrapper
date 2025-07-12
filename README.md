@@ -4,7 +4,7 @@ Sorry for the code
 Принимает<br/>
 <code>@example</code><br/>
 Отдает</br>
-<code>ID:int Name:string Username:strnig Bio:string channel_id:int</code><br/>
+<code>ID:int Name:string Username:strnig Bio:string</code><br/>
 
 Первый запуск <br/>
 <code>pip install -r requirements.txt</code><br/>
