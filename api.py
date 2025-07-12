@@ -1,7 +1,9 @@
 #фото хуево подгружает из-за настроек безопасности
 #personal_channel vs messaging_channel
-#todo сделать выгрузку всех био в файл, добавить проверку на аватарку + канал, инструкция по добавлению приложения
-#сделать декоратор, добавить туда bio
+#@todo сделать декоратор фильтров, добавить туда bio
+#@todo кастомный вывод 
+#@todo расширить выбор данных для получения
+
 from telethon import TelegramClient
 from telethon.tl.functions.users import GetFullUserRequest
 from fuzzywuzzy import fuzz
