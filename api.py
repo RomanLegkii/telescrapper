@@ -3,10 +3,12 @@
 #@todo сделать декоратор фильтров, добавить туда bio
 #@todo кастомный вывод 
 #@todo расширить выбор данных для получения
+#@todo проверка таймаута при старте бота
 
 from telethon import TelegramClient
 from telethon.tl.functions.users import GetFullUserRequest
 from fuzzywuzzy import fuzz
+from functools import wraps
 import asyncio
 import os
 import sys
@@ -29,6 +31,7 @@ minimum = int(os.getenv('RATIO'))
 timeout = int(os.getenv('TIMEOUT_LIMIT'))
 sleep = int(os.getenv('SLEEP_TIME'))
 outputType = os.getenv('OUTPUT_TYPE')
+selectedStrategies = os.getenv('SEARCH_STRATEGY').split(',')
 
 def printInfo(info,full,bio,file,extra,type):#переделать
     if type == 'id_name_username_bio':
@@ -60,6 +63,52 @@ class Search(ABC):  #нах он нужен тут
     @abstractmethod
     async def doSearch(self, info, full, bio, file):
         pass
+
+# Декораторы для проверок
+def check_bio(func):
+    @wraps(func)
+    async def wrapper(info, full, bio, file, *args, **kwargs):
+        if bio is None:
+            print(f"No bio for @{info.username}")
+            return
+        return await func(info, full, bio, file, *args, **kwargs)
+    return wrapper
+
+def check_channel(func):
+    @wraps(func)
+    async def wrapper(info, full, bio, file, *args, **kwargs):
+        if full.full_user.personal_channel_id is None:
+            print(f"No channel for @{info.username}")
+            return
+        return await func(info, full, bio, file, *args, **kwargs)
+    return wrapper
+
+def check_photo(func):
+    @wraps(func)
+    async def wrapper(info, full, bio, file, *args, **kwargs):
+        if info.photo is None:
+            print(f"No photo for @{info.username}")
+            return
+        return await func(info, full, bio, file, *args, **kwargs)
+    return wrapper
+
+# Базовая функция поиска
+async def do_search(info, full, bio, file, extra_data=None):
+    print(f"Processing @{info.username}, bio: {bio}, extra: {extra_data}")
+    return {"username": info.username, "bio": bio, "full":full, "info":info, "file":file, "extra": extra_data}
+
+# Функция для компоновки декораторов
+def apply_filters(filters, base_func):
+    filter_decorators = {
+        "bio": check_bio,
+        "channel": check_channel,
+        "photo": check_photo,
+    }
+    decorators = [filter_decorators[f] for f in filters if f in filter_decorators]
+    decorated_func = base_func
+    for decorator in reversed(decorators):
+        decorated_func = decorator(decorated_func)
+    return decorated_func
 
 class FuzzySearch(Search):
     async def doSearch(self, info, full, bio, file):
@@ -116,8 +165,6 @@ search_strategies['no'] = NoSearch()
 search_strategies['channelAndPhoto'] = ChannelAndPhotoSearch()
 search_strategies['channel'] = ChannelSearch()
 
-search_strategy = search_strategies[str(os.getenv('SEARCH_STRATEGY'))]
-
 def removeSession(path='.'):
     try:
         with os.scandir(path) as entries:
@@ -144,7 +191,11 @@ async def processUser(id,f):
         await asyncio.sleep(sleep)
         bio = full.full_user.about
 
-        await search_strategy.doSearch(info, full, bio, f)
+        filtered_search = apply_filters(selectedStrategies, do_search)
+        result = await filtered_search(info, full, bio, f)
+        if result is None:
+            return
+        printInfo(result['info'],result['full'], result['bio'], f, result['extra'], outputType)
 
     except asyncio.TimeoutError:
          f.write(f"Timeout for {id}\n")
