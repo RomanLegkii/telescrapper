@@ -1,3 +1,3 @@
 @echo off
-python api.py
+py api.py
 pause
