@@ -28,23 +28,33 @@ needle = str(os.getenv('NEEDLE'))
 minimum = int(os.getenv('RATIO'))
 timeout = int(os.getenv('TIMEOUT_LIMIT'))
 sleep = int(os.getenv('SLEEP_TIME'))
+outputType = os.getenv('OUTPUT_TYPE')
 
-def printInfo(info,full,bio,file,extra):
-    keys = extra.keys()
-    try:
-        file.write(f"ID: {info.id}\t")
-        file.write(f"Name: {info.first_name or 'None'} {info.last_name or 'None'}\t")
-        file.write(f"Username: @{info.username or 'None'}\t")
-        file.write(f"Bio: {bio or 'None'}\t")
-        for key in keys:
-            file.write(f"{key}: {extra[key]}\n")
-        if keys is None:
-            file.write("\n")
-        print(f"Data for @{info.username or info.id} saved to {resultFile}")
-
-    except Exception as e:
-        file.write(f"Error for @{info.username or info.id}: {str(e)}\n")
-        print(f"Error for @{info.username or info.id}: {str(e)}")
+def printInfo(info,full,bio,file,extra,type):#переделать
+    if type == 'id_name_username_bio':
+        keys = extra.keys()
+        try:
+            file.write(f"ID: {info.id}\t")
+            file.write(f"Name: {info.first_name or 'None'} {info.last_name or 'None'}\t")
+            file.write(f"Username: @{info.username or 'None'}\t")
+            file.write(f"Bio: {bio or 'None'}\t")
+            for key in keys:
+                file.write(f"{key}: {extra[key]}\n")
+            if keys is None:
+                file.write("\n")
+            print(f"Data for @{info.username or info.id} saved to {resultFile}")
+      
+        except Exception as e:
+            file.write(f"Error for @{info.username or info.id}: {str(e)}\n")
+            print(f"Error for @{info.username or info.id}: {str(e)}")
+    else: 
+        try:
+            file.write(f"Username: @{info.username or 'None'}\t")
+            file.write(f"Bio: {bio or 'None'}\t")
+            print(f"Data for @{info.username or info.id} saved to {resultFile}")
+        except Exception as e:
+            file.write(f"Error for @{info.username or info.id}: {str(e)}\n")
+            print(f"Error for @{info.username or info.id}: {str(e)}")
 
 class Search(ABC):  #нах он нужен тут
     @abstractmethod
@@ -61,7 +71,7 @@ class FuzzySearch(Search):
         ratio = fuzz.ratio(needle.lower(), bio.lower())
         print(f"Similarity for @{info.username or info.id}: {ratio}")
         if ratio >= minimum:
-            printInfo(info,full,bio,file,{'ratio':ratio})
+            printInfo(info,full,bio,file,{'ratio':ratio},outputType)
 
 class TextContainsSearch(Search):
     async def doSearch(self, info, full, bio, file):
@@ -71,11 +81,11 @@ class TextContainsSearch(Search):
             return
 
         if needle.lower() in bio.lower():
-            printInfo(info,full,bio,file,{'needle':needle})
+            printInfo(info,full,bio,file,{'needle':needle},outputType)
 
 class NoSearch(Search):
     async def doSearch(self, info, full, bio, file):
-        printInfo(info,full,bio,file,{})
+        printInfo(info,full,bio,file,{},outputType)
 
 class ChannelAndPhotoSearch(Search):
     async def doSearch(self, info, full, bio, file):
@@ -85,7 +95,7 @@ class ChannelAndPhotoSearch(Search):
             return
 
         if (info.photo is not None) and (full.full_user.personal_channel_id is not None):
-            printInfo(info,full,bio,file,{})
+            printInfo(info,full,bio,file,{},outputType)
 
 class ChannelSearch(Search):
     async def doSearch(self, info, full, bio, file):
@@ -97,7 +107,7 @@ class ChannelSearch(Search):
         if full.full_user.personal_channel_id is None:
             print(f"No channel for @{info.username}")
             return
-        printInfo(info,full,bio,file,{'channel_id': full.full_user.personal_channel_id})
+        printInfo(info,full,bio,file,{'channel_id': full.full_user.personal_channel_id},outputType)
 
 search_strategies = {}
 search_strategies['fuzzy'] = FuzzySearch()
