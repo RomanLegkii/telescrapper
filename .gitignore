@@ -5,4 +5,4 @@ users.txt
 users_info.txt
 
 *.session
-*.journal
+*.session-journal
