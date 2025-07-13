@@ -1,6 +1,7 @@
 *.env
 
 users.txt
+myusers.txt
 
 users_info.txt
 
