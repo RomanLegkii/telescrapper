@@ -7,7 +7,7 @@ Sorry for the code
 <code>ID:int Name:string Username:strnig Bio:string</code><br/>
 
 Первый запуск <br/>
-<code>pip install -r requirements.txt</code><br/>
+<code>py -m pip install -r requirements.txt</code><br/>
   
 Использование <br/>
 <code>py api.py</code><br/>
