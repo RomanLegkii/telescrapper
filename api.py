@@ -1,9 +1,5 @@
-#фото хуево подгружает из-за настроек безопасности
-#personal_channel vs messaging_channel
-#@todo сделать декоратор фильтров, добавить туда bio
 #@todo кастомный вывод 
 #@todo расширить выбор данных для получения
-#@todo проверка таймаута при старте бота
 
 from telethon import TelegramClient
 from telethon.tl.functions.users import GetFullUserRequest
@@ -42,9 +38,8 @@ def printInfo(info,full,bio,file,extra,type):#переделать
             file.write(f"Username: @{info.username or 'None'}\t")
             file.write(f"Bio: {bio or 'None'}\t")
             for key in keys:
-                file.write(f"{key}: {extra[key]}\n")
-            if keys is None:
-                file.write("\n")
+                file.write(f"{key}: {extra[key]}\t")
+            file.write("\n")
             print(f"Data for @{info.username or info.id} saved to {resultFile}")
       
         except Exception as e:
@@ -53,7 +48,7 @@ def printInfo(info,full,bio,file,extra,type):#переделать
     else: 
         try:
             file.write(f"Username: @{info.username or 'None'}\t")
-            file.write(f"Bio: {bio or 'None'}\t")
+            file.write(f"Bio: {bio or 'None'}\n")
             print(f"Data for @{info.username or info.id} saved to {resultFile}")
         except Exception as e:
             file.write(f"Error for @{info.username or info.id}: {str(e)}\n")
@@ -92,78 +87,50 @@ def check_photo(func):
         return await func(info, full, bio, file, *args, **kwargs)
     return wrapper
 
+def check_bio_contains(func):
+    @wraps(func)
+    async def wrapper(info, full, bio, file, *args, **kwargs):
+        if bio is None or needle.lower() not in bio.lower():
+            print(f"Needle or bio wasn't found for @{info.username}")
+            return
+        return await func(info, full, bio, file, *args, **kwargs)
+    return wrapper
+
+def check_bio_fuzzy(func):
+    @wraps(func)
+    async def wrapper(info, full, bio, file, *args, **kwargs):
+        if bio is None:
+             print(f"No bio for @{info.username}")
+             return
+        ratio = fuzz.ratio(needle.lower(), bio.lower())
+        print(f"Similarity for @{info.username}: {ratio}")
+        if ratio < minimum:
+            return
+        return await func(info, full, bio, file, *args, **kwargs)
+    return wrapper
+
 # Базовая функция поиска
 async def do_search(info, full, bio, file, extra_data=None):
-    print(f"Processing @{info.username}, bio: {bio}, extra: {extra_data}")
+    print(f"Found match @{info.username}")
     return {"username": info.username, "bio": bio, "full":full, "info":info, "file":file, "extra": extra_data}
 
 # Функция для компоновки декораторов
 def apply_filters(filters, base_func):
-    filter_decorators = {
-        "bio": check_bio,
-        "channel": check_channel,
-        "photo": check_photo,
-    }
+
     decorators = [filter_decorators[f] for f in filters if f in filter_decorators]
     decorated_func = base_func
     for decorator in reversed(decorators):
         decorated_func = decorator(decorated_func)
     return decorated_func
 
-class FuzzySearch(Search):
-    async def doSearch(self, info, full, bio, file):
-
-        if bio is None:
-            print(f"No bio for @{info.username}")
-            return
-
-        ratio = fuzz.ratio(needle.lower(), bio.lower())
-        print(f"Similarity for @{info.username or info.id}: {ratio}")
-        if ratio >= minimum:
-            printInfo(info,full,bio,file,{'ratio':ratio},outputType)
-
-class TextContainsSearch(Search):
-    async def doSearch(self, info, full, bio, file):
-
-        if bio is None:
-            print(f"No bio for @{info.username}")
-            return
-
-        if needle.lower() in bio.lower():
-            printInfo(info,full,bio,file,{'needle':needle},outputType)
-
-class NoSearch(Search):
-    async def doSearch(self, info, full, bio, file):
-        printInfo(info,full,bio,file,{},outputType)
-
-class ChannelAndPhotoSearch(Search):
-    async def doSearch(self, info, full, bio, file):
-
-        if bio is None:
-            print(f"No bio for @{info.username}")
-            return
-
-        if (info.photo is not None) and (full.full_user.personal_channel_id is not None):
-            printInfo(info,full,bio,file,{},outputType)
-
-class ChannelSearch(Search):
-    async def doSearch(self, info, full, bio, file):
-
-        if bio is None:
-            print(f"No bio for @{info.username}")
-            return
-
-        if full.full_user.personal_channel_id is None:
-            print(f"No channel for @{info.username}")
-            return
-        printInfo(info,full,bio,file,{'channel_id': full.full_user.personal_channel_id},outputType)
-
-search_strategies = {}
-search_strategies['fuzzy'] = FuzzySearch()
-search_strategies['contains'] = TextContainsSearch()
-search_strategies['no'] = NoSearch()
-search_strategies['channelAndPhoto'] = ChannelAndPhotoSearch()
-search_strategies['channel'] = ChannelSearch()
+#регистрация декораторов
+filter_decorators = {
+    "bio": check_bio,
+    "channel": check_channel,
+    "photo": check_photo,
+    "bio_contains": check_bio_contains,
+    "bio_fuzzy": check_bio_fuzzy,
+}
 
 def removeSession(path='.'):
     try:
@@ -180,6 +147,22 @@ def removeSession(path='.'):
         print(f"Permission denied for directory {path}")
     except Exception as e:
         print(f"Error scanning directory {path}: {str(e)}")
+
+async def switchBot():
+    global tokenIndex, bot, bot_token, tokens
+    tokenIndex += 1
+
+    if tokenIndex > len(tokens)-1:
+        print("All bots have been used!")
+        sys.exit()
+
+    print(f"Switching to bot#{tokenIndex+1}")
+
+    await bot.disconnect()
+    os.remove('bot.session')
+    bot =  TelegramClient('bot', api_id, api_hash)
+    bot_token = tokens[tokenIndex]
+    await bot.start(bot_token=bot_token)
 
 async def processUser(id,f):
     global bot
@@ -206,20 +189,7 @@ async def processUser(id,f):
             f.write(f"Error for {id}: {str(e)}\n")
             print(f"Error for {id}: {str(e)}")
 
-            global tokenIndex, tokens, bot_token
-            tokenIndex+=1
-
-            if tokenIndex > len(tokens)-1:
-                print("All bots have been used!")
-                sys.exit()
-
-            print(f"Switching to bot#{tokenIndex+1}")
-
-            await bot.disconnect()
-            os.remove('bot.session')
-            bot =  TelegramClient('bot', api_id, api_hash)
-            bot_token = tokens[tokenIndex]
-            await bot.start(bot_token=bot_token)
+            switchBot()
 
             await processUser(id,f)
             return
@@ -235,7 +205,13 @@ bot =  TelegramClient('bot', api_id, api_hash)
 
 async def main():
     global bot
-    await bot.start(bot_token=bot_token)
+
+    try:
+        await bot.start(bot_token=bot_token)
+    except Exception as e:
+        print(str(e))
+        if "A wait of" in str(e):
+            await switchBot()
 
     with open(fileName, 'r', encoding='utf-8') as r:
         for line in r:
