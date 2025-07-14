@@ -29,16 +29,25 @@ sleep = int(os.getenv('SLEEP_TIME'))
 outputType = os.getenv('OUTPUT_TYPE')
 selectedStrategies = os.getenv('SEARCH_STRATEGY').split(',')
 
-def printInfo(info,full,bio,file,extra,type):#переделать
-    if type == 'id_name_username_bio':
-        keys = extra.keys()
+def printInfo(info,full,bio,file):#переделать
+    global outputType
+    if outputType == 'id_name_username_bio':
+        extra = {}
+        if hasattr(full.full_user,'personal_channel_id') and full.full_user.personal_channel_id is not None:
+            extra['channel_id'] = full.full_user.personal_channel_id
+        if hasattr(info,'photo') and info.photo is not None:
+            extra['photo'] = info.photo
+
+        if extra is not None:
+            keys = extra.keys()
         try:
             file.write(f"ID: {info.id}\t")
             file.write(f"Name: {info.first_name or 'None'} {info.last_name or 'None'}\t")
             file.write(f"Username: @{info.username or 'None'}\t")
             file.write(f"Bio: {bio or 'None'}\t")
-            for key in keys:
-                file.write(f"{key}: {extra[key]}\t")
+            if 'keys' in locals():
+                for key in keys:
+                    file.write(f"{key}: {extra[key]}\t")
             file.write("\n")
             print(f"Data for @{info.username or info.id} saved to {resultFile}")
       
@@ -110,9 +119,9 @@ def check_bio_fuzzy(func):
     return wrapper
 
 # Базовая функция поиска
-async def do_search(info, full, bio, file, extra_data=None):
+async def do_search(info, full, bio, file):
     print(f"Found match @{info.username}")
-    return {"username": info.username, "bio": bio, "full":full, "info":info, "file":file, "extra": extra_data}
+    return {"username": info.username, "bio": bio, "full":full, "info":info, "file":file}
 
 # Функция для компоновки декораторов
 def apply_filters(filters, base_func):
@@ -178,7 +187,7 @@ async def processUser(id,f):
         result = await filtered_search(info, full, bio, f)
         if result is None:
             return
-        printInfo(result['info'],result['full'], result['bio'], f, result['extra'], outputType)
+        printInfo(result['info'],result['full'], result['bio'], f)
 
     except asyncio.TimeoutError:
          f.write(f"Timeout for {id}\n")
