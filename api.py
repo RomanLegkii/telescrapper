@@ -11,7 +11,11 @@ import sys
 from dotenv import load_dotenv
 from abc import ABC, abstractmethod
 
-load_dotenv('vars.env')
+isLoaded = load_dotenv('vars.env')
+if isLoaded is False:
+    print('.env file not found')
+    sys.exit()
+
 
 api_id = int(os.getenv('API_ID'))
 api_hash = str(os.getenv('API_HASH'))
@@ -19,15 +23,39 @@ tokens = os.getenv('BOT_TOKENS').split(',')
 tokenIndex = 0
 bot_token = tokens[tokenIndex]
 
-
 fileName = str(os.getenv('SRC_FILENAME'))
 resultFile = str(os.getenv('RESULT_FILENAME'))
 needle = str(os.getenv('NEEDLE'))
 minimum = int(os.getenv('RATIO'))
 timeout = int(os.getenv('TIMEOUT_LIMIT'))
 sleep = int(os.getenv('SLEEP_TIME'))
-outputType = os.getenv('OUTPUT_TYPE')
-selectedStrategies = os.getenv('SEARCH_STRATEGY').split(',')
+outputType = os.getenv('OUTPUT_TYPE') #legacy -> could be empty
+selectedStrategies = os.getenv('SEARCH_STRATEGY')
+if selectedStrategies != '':
+    selectedStrategies = selectedStrategies.split(',')
+
+
+
+#null variable check
+localsCopy = list(locals().keys())
+hardcodedLocals = ['__name__', '__doc__', '__package__', '__loader__', '__spec__', 
+                   '__file__', '__cached__', '__builtins__', 'TelegramClient', 'GetFullUserRequest', 'fuzz',
+                    'wraps', 'asyncio', 'os', 'sys', 'load_dotenv', 'ABC', 'abstractmethod', 'localVars','outputType']
+settings = {}
+errorVars = []
+for local in localsCopy:
+    if local not in hardcodedLocals:
+        settings[local] = locals()[local]
+
+for key,setting in settings.items():
+    if setting is None or (isinstance(setting, (str, list)) and len(setting) == 0):
+        print(f"Key: {key}, Value: {setting}")
+        errorVars.append(key)
+
+if len(errorVars) > 0:
+    print(f"Following variables can't be null {errorVars}")
+    sys.exit()
+
 
 def printInfo(info,full,bio,file):#переделать
     global outputType
