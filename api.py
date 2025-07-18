@@ -9,6 +9,7 @@ import asyncio
 import os
 import sys
 from dotenv import load_dotenv
+from dto.Settings import Settings
 
 isLoaded = load_dotenv('vars.env')
 if isLoaded is False:
@@ -16,46 +17,63 @@ if isLoaded is False:
     sys.exit()
 
 
-api_id = int(os.getenv('API_ID'))
-api_hash = str(os.getenv('API_HASH'))
-tokens = os.getenv('BOT_TOKENS').split(',')
-tokenIndex = 0
-bot_token = tokens[tokenIndex]
+# api_id = int(os.getenv('API_ID'))
+# api_hash = str(os.getenv('API_HASH'))
+# tokens = os.getenv('BOT_TOKENS').split(',')
+# tokenIndex = 0
+# bot_token = tokens[tokenIndex]
 
-fileName = str(os.getenv('SRC_FILENAME'))
-resultFile = str(os.getenv('RESULT_FILENAME'))
-needle = str(os.getenv('NEEDLE'))
-minimum = int(os.getenv('RATIO'))
-timeout = int(os.getenv('TIMEOUT_LIMIT'))
-sleep = int(os.getenv('SLEEP_TIME'))
-outputType = os.getenv('OUTPUT_TYPE') #legacy -> could be empty
-if outputType is not None and ',' in outputType:
-    outputType = outputType.split(',')
-selectedStrategies = os.getenv('SEARCH_STRATEGY')
-if selectedStrategies != '':
-    selectedStrategies = selectedStrategies.split(',')
+# fileName = str(os.getenv('SRC_FILENAME'))
+# resultFile = str(os.getenv('RESULT_FILENAME'))
+# needle = str(os.getenv('NEEDLE'))
+# minimum = int(os.getenv('RATIO'))
+# timeout = int(os.getenv('TIMEOUT_LIMIT'))
+# sleep = int(os.getenv('SLEEP_TIME'))
+# outputType = os.getenv('OUTPUT_TYPE') #legacy -> could be empty
+# if outputType is not None and ',' in outputType:
+#     outputType = outputType.split(',')
+# selectedStrategies = os.getenv('SEARCH_STRATEGY')
+# if selectedStrategies != '':
+#     selectedStrategies = selectedStrategies.split(',')
+
+#Проверка, что os.getenv — это функция
+
+Sett = Settings(
+    apiId=os.getenv('API_ID'),
+    apiHash = os.getenv('API_HASH'),
+    tokens = os.getenv('BOT_TOKENS'),
+    fileName = os.getenv('SRC_FILENAME'),
+    resultFile = os.getenv('RESULT_FILENAME'),
+    needle = os.getenv('NEEDLE'),
+    minimum = os.getenv('RATIO'),
+    timeout = os.getenv('TIMEOUT_LIMIT'),
+    sleep = os.getenv('SLEEP_TIME'),
+    outputType = os.getenv('OUTPUT_TYPE'))
+#bot_token = tokens[tokenIndex]
+print(Sett.getApiId())
+
 
 
 
 #null variable check
-localsCopy = list(locals().keys())
-hardcodedLocals = ['__name__', '__doc__', '__package__', '__loader__', '__spec__', 
-                   '__file__', '__cached__', '__builtins__', 'TelegramClient', 'GetFullUserRequest', 'fuzz',
-                    'wraps', 'asyncio', 'os', 'sys', 'load_dotenv', 'ABC', 'abstractmethod', 'localVars','outputType']
-settings = {}
-errorVars = []
-for local in localsCopy:
-    if local not in hardcodedLocals:
-        settings[local] = locals()[local]
+#localsCopy = list(locals().keys())
+#hardcodedLocals = ['__name__', '__doc__', '__package__', '__loader__', '__spec__', 
+#                   '__file__', '__cached__', '__builtins__', 'TelegramClient', 'GetFullUserRequest', 'fuzz',
+#                    'wraps', 'asyncio', 'os', 'sys', 'load_dotenv', 'ABC', 'abstractmethod', 'localVars','outputType']
+#settings = {}
+#errorVars = []
+#for local in localsCopy:
+#    if local not in hardcodedLocals:
+#        settings[local] = locals()[local]
 
-for key,setting in settings.items():
-    if setting is None or (isinstance(setting, (str, list)) and len(setting) == 0):
-        print(f"Key: {key}, Value: {setting}")
-        errorVars.append(key)
+#for key,setting in settings.items():
+#    if setting is None or (isinstance(setting, (str, list)) and len(setting) == 0):
+#        print(f"Key: {key}, Value: {setting}")
+#        errorVars.append(key)
 
-if len(errorVars) > 0:
-    print(f"Following variables can't be null {errorVars}")
-    sys.exit()
+# if len(errorVars) > 0:
+#     print(f"Following variables can't be null {errorVars}")
+#     sys.exit()
 
 
 def printCustomInfo(info,full,bio,file):
@@ -279,6 +297,8 @@ bot =  TelegramClient('bot', api_id, api_hash)
 
 async def main():
     global bot
+
+    Settings = Settings(apiId,apiHash,tokens)
 
     foundWorkingBot = False
     while(foundWorkingBot == False):
