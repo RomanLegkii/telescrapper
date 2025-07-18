@@ -30,6 +30,8 @@ minimum = int(os.getenv('RATIO'))
 timeout = int(os.getenv('TIMEOUT_LIMIT'))
 sleep = int(os.getenv('SLEEP_TIME'))
 outputType = os.getenv('OUTPUT_TYPE') #legacy -> could be empty
+if outputType is not None and ',' in outputType:
+    outputType = outputType.split(',')
 selectedStrategies = os.getenv('SEARCH_STRATEGY')
 if selectedStrategies != '':
     selectedStrategies = selectedStrategies.split(',')
@@ -57,7 +59,32 @@ if len(errorVars) > 0:
     sys.exit()
 
 
-def printInfo(info,full,bio,file):#переделать
+def printCustomInfo(info,full,bio,file):
+    global outputType
+
+    if type(outputType) == str:
+        outputType = [outputType]
+
+    for string in outputType:
+        cl, obj = string.split(':')
+
+        target_obj = locals().get(cl)
+        if target_obj is None:
+            raise ValueError(f"Объект {cl} не найден")
+
+        objects = obj.split('.')
+        for objec in objects:
+            target_obj = getattr(target_obj,objec)
+
+        if type(target_obj) == str or type(target_obj) == int:
+            file.write(f"{obj}: {target_obj}\t")
+        else: 
+            file.write(f"{obj}: {target_obj.stringify()}\t")
+    file.write("\n")
+    print(f"Custom data for @{info.username or info.id} saved to {resultFile}")
+
+
+def printInfo(info,full,bio,file):#переделать бы
     global outputType
     if outputType == 'id_name_username_bio':
         extra = {}
@@ -82,7 +109,14 @@ def printInfo(info,full,bio,file):#переделать
         except Exception as e:
             file.write(f"Error for @{info.username or info.id}: {str(e)}\n")
             print(f"Error for @{info.username or info.id}: {str(e)}")
-    else: 
+    elif outputType == 'raw':
+        try:
+            file.write(f"info: {info.stringify()}\n")
+            file.write(f"full: {full.stringify()}\n")
+        except Exception as e:
+            file.write(f"Error for @{info.username or info.id}: {str(e)}\n")
+            print(f"Error for @{info.username or info.id}: {str(e)}")
+    elif outputType == '' or outputType is None:
         try:
             file.write(f"Username: @{info.username or 'None'}\t")
             file.write(f"Bio: {bio or 'None'}\n")
@@ -90,11 +124,8 @@ def printInfo(info,full,bio,file):#переделать
         except Exception as e:
             file.write(f"Error for @{info.username or info.id}: {str(e)}\n")
             print(f"Error for @{info.username or info.id}: {str(e)}")
-
-class Search(ABC):  #нах он нужен тут
-    @abstractmethod
-    async def doSearch(self, info, full, bio, file):
-        pass
+    else:
+        printCustomInfo(info,full,bio,file)
 
 # Декораторы для проверок
 def check_bio(func):
@@ -160,7 +191,7 @@ def apply_filters(filters, base_func):
         decorated_func = decorator(decorated_func)
     return decorated_func
 
-#регистрация декораторов
+# Регистрация декораторов
 filter_decorators = {
     "bio": check_bio,
     "channel": check_channel,
@@ -187,19 +218,26 @@ def removeSession(path='.'):
 
 async def switchBot():
     global tokenIndex, bot, bot_token, tokens
-    tokenIndex += 1
+    try:
+        tokenIndex += 1
 
-    if tokenIndex > len(tokens)-1:
-        print("All bots have been used!")
-        sys.exit()
+        if tokenIndex > len(tokens)-1:
+            print("All bots have been used!")
+            sys.exit()
 
-    print(f"Switching to bot#{tokenIndex+1}")
+        print(f"Switching to bot#{tokenIndex+1}")
+     
+        await bot.disconnect()
+        os.remove('bot.session')
+        bot =  TelegramClient('bot', api_id, api_hash)
+        bot_token = tokens[tokenIndex]
+        await bot.start(bot_token=bot_token)
+    except Exception as e:
+        print(str(e))
+        if "A wait of" in str(e):
+            await switchBot()
 
-    await bot.disconnect()
-    os.remove('bot.session')
-    bot =  TelegramClient('bot', api_id, api_hash)
-    bot_token = tokens[tokenIndex]
-    await bot.start(bot_token=bot_token)
+
 
 async def processUser(id,f):
     global bot
@@ -243,12 +281,17 @@ bot =  TelegramClient('bot', api_id, api_hash)
 async def main():
     global bot
 
-    try:
-        await bot.start(bot_token=bot_token)
-    except Exception as e:
-        print(str(e))
-        if "A wait of" in str(e):
-            await switchBot()
+    foundWorkingBot = False
+    while(foundWorkingBot == False):
+        try:
+            await bot.start(bot_token=bot_token)
+        except Exception as e:
+            print(str(e))
+            if "A wait of" in str(e):
+                await switchBot()
+        finally:
+            foundWorkingBot = True
+            
 
     with open(fileName, 'r', encoding='utf-8') as r:
         for line in r:
