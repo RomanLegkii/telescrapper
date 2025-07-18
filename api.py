@@ -256,8 +256,8 @@ async def processUser(id,f):
         printInfo(result['info'],result['full'], result['bio'], f)
 
     except asyncio.TimeoutError:
-         f.write(f"Timeout for {id}\n")
-         print(f"Timeout for {id}")
+        f.write(f"Timeout for {id}\n")
+        print(f"Timeout for {id}")
 
     except Exception as e:
         if "A wait of" in str(e):
