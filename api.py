@@ -9,7 +9,6 @@ import asyncio
 import os
 import sys
 from dotenv import load_dotenv
-from abc import ABC, abstractmethod
 
 isLoaded = load_dotenv('vars.env')
 if isLoaded is False:
