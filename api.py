@@ -143,44 +143,6 @@ filter_decorators = {
     "bio_fuzzy": checkBioFuzzy,
 }
 
-
-
-
-
-# async def processUser(id,f):
-#     global bot
-#     try:
-#         info = await asyncio.wait_for(bot.get_entity(id), timeout=timeout)
-#         full = await asyncio.wait_for(bot(GetFullUserRequest(id)), timeout=timeout)
-
-#         print(f"Waiting {sleep} seconds") #move to the end
-#         await asyncio.sleep(sleep)
-#         bio = full.full_user.about
-
-#         filtered_search = apply_filters(selectedStrategies, do_search)
-#         result = await filtered_search(info, full, bio, f)
-#         if result is None:
-#             return
-#         printInfo(result['info'],result['full'], result['bio'], f)
-
-#     except asyncio.TimeoutError:
-#          f.write(f"Timeout for {id}\n")
-#          print(f"Timeout for {id}")
-
-#     except Exception as e:
-#         if "A wait of" in str(e):
-#             f.write(f"Error for {id}: {str(e)}\n")
-#             print(f"Error for {id}: {str(e)}")
-
-#             switchBot()
-
-#             await processUser(id,f)
-#             return
-
-#         f.write(f"Error for {id}: {str(e)}\n")
-#         print(f"Error for {id}: {str(e)}")
-
-
 class Main(BaseModel):
 
     inputFile:TextIO = SETTINGS.getInputFile()
@@ -212,23 +174,37 @@ class Main(BaseModel):
     
     
     async def processLine(self, line):
-        username = line.strip()
-        print(f"Processing {username}")
-    
-        if '@' not in username:
-            return
+        try:
+            username = line.strip()
+            print(f"Processing {username}")
+         
+            if '@' not in username:
+                return
+         
+            USER = User(username = username)
+         
+            USER.setUserInfo(await BOT.getUser(USER,SETTINGS),) #so tight step bro
+            USER.setUserFullInfo(await BOT.getUserFull(USER,SETTINGS)) #i want to see your big biautiful interface
+         
+            await asyncio.sleep(SETTINGS.getSleep())
+         
+            filtered_search = apply_filters(SETTINGS.getSearchStrategyList(), do_search)
+            result = await filtered_search(USER,SETTINGS)
+            if result is not None:
+                printInfo(result)
 
-        USER = User(username = username)
+        except asyncio.TimeoutError:
+            SETTINGS.getOutputFile().write(f"Timeout for {id}\n")
+            print(f"Timeout for {id}")
 
-        USER.setUserInfo(await BOT.getUser(USER,SETTINGS),) #so tight step bro
-        USER.setUserFullInfo(await BOT.getUserFull(USER,SETTINGS)) #i want to see your big biautiful interface
+        except Exception as e:
+            SETTINGS.getOutputFile.write(f"Error for {id}: {str(e)}\n")
+            print(f"Error for {id}: {str(e)}")
 
-        await asyncio.sleep(SETTINGS.getSleep())
+            if "A wait of" in str(e):
+                self.switchBot()
+                self.processLine(line)
 
-        filtered_search = apply_filters(SETTINGS.getSearchStrategyList(), do_search)
-        result = await filtered_search(USER,SETTINGS)
-        if result is not None:
-            printInfo(result)
 
     async def switchBot(self):
         try:
