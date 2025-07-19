@@ -7,3 +7,4 @@ users_info.txt
 
 *.session
 *.session-journal
+__pycache__

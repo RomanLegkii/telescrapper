@@ -1,6 +1,5 @@
-#@todo кастомный вывод 
-#@todo расширить выбор данных для получения
-
+#di
+from pydantic import BaseModel
 from telethon import TelegramClient
 from telethon.tl.functions.users import GetFullUserRequest
 from fuzzywuzzy import fuzz
@@ -8,72 +7,38 @@ from functools import wraps
 import asyncio
 import os
 import sys
+import decorators.checkBio as checkBio 
 from dotenv import load_dotenv
 from dto.Settings import Settings
+from dto.Bot import Bot
+from dto.User import User
+from typing import TextIO
 
 isLoaded = load_dotenv('vars.env')
 if isLoaded is False:
     print('.env file not found')
     sys.exit()
 
-
-# api_id = int(os.getenv('API_ID'))
-# api_hash = str(os.getenv('API_HASH'))
-# tokens = os.getenv('BOT_TOKENS').split(',')
-# tokenIndex = 0
-# bot_token = tokens[tokenIndex]
-
-# fileName = str(os.getenv('SRC_FILENAME'))
-# resultFile = str(os.getenv('RESULT_FILENAME'))
-# needle = str(os.getenv('NEEDLE'))
-# minimum = int(os.getenv('RATIO'))
-# timeout = int(os.getenv('TIMEOUT_LIMIT'))
-# sleep = int(os.getenv('SLEEP_TIME'))
-# outputType = os.getenv('OUTPUT_TYPE') #legacy -> could be empty
-# if outputType is not None and ',' in outputType:
-#     outputType = outputType.split(',')
-# selectedStrategies = os.getenv('SEARCH_STRATEGY')
-# if selectedStrategies != '':
-#     selectedStrategies = selectedStrategies.split(',')
-
-#Проверка, что os.getenv — это функция
-
-Sett = Settings(
+SETTINGS = Settings(
     apiId=os.getenv('API_ID'),
     apiHash = os.getenv('API_HASH'),
     tokens = os.getenv('BOT_TOKENS'),
-    fileName = os.getenv('SRC_FILENAME'),
-    resultFile = os.getenv('RESULT_FILENAME'),
+    inputFile = os.getenv('SRC_FILENAME'),
+    outputFile = os.getenv('RESULT_FILENAME'),
     needle = os.getenv('NEEDLE'),
     minimum = os.getenv('RATIO'),
     timeout = os.getenv('TIMEOUT_LIMIT'),
     sleep = os.getenv('SLEEP_TIME'),
-    outputType = os.getenv('OUTPUT_TYPE'))
-#bot_token = tokens[tokenIndex]
-print(Sett.getApiId())
+    outputType = os.getenv('OUTPUT_TYPE'),
+    searchStrategy = os.getenv('SEARCH_STRATEGY')
+)
+BOT =  Bot(
+    botToken = SETTINGS.getBotToken(), 
+    apiId = SETTINGS.getApiId(), 
+    apiHash = SETTINGS.getApiHash()
+)
 
-
-
-
-#null variable check
-#localsCopy = list(locals().keys())
-#hardcodedLocals = ['__name__', '__doc__', '__package__', '__loader__', '__spec__', 
-#                   '__file__', '__cached__', '__builtins__', 'TelegramClient', 'GetFullUserRequest', 'fuzz',
-#                    'wraps', 'asyncio', 'os', 'sys', 'load_dotenv', 'ABC', 'abstractmethod', 'localVars','outputType']
-#settings = {}
-#errorVars = []
-#for local in localsCopy:
-#    if local not in hardcodedLocals:
-#        settings[local] = locals()[local]
-
-#for key,setting in settings.items():
-#    if setting is None or (isinstance(setting, (str, list)) and len(setting) == 0):
-#        print(f"Key: {key}, Value: {setting}")
-#        errorVars.append(key)
-
-# if len(errorVars) > 0:
-#     print(f"Following variables can't be null {errorVars}")
-#     sys.exit()
+print(SETTINGS.getOutputTypeList())
 
 
 def printCustomInfo(info,full,bio,file):
@@ -101,7 +66,14 @@ def printCustomInfo(info,full,bio,file):
     print(f"Custom data for @{info.username or info.id} saved to {resultFile}")
 
 
-def printInfo(info,full,bio,file):#переделать бы
+def printInfo(User:User):#переделать бы
+    info = User.getUserInfo()
+    full = User.getUserFullInfo()
+    bio = User.getBio()
+    file = SETTINGS.getOutputFile()
+    print(User.stringify())
+    file.write('oop hustla')
+    sys.exit()
     global outputType
     if outputType == 'id_name_username_bio':
         extra = {}
@@ -145,14 +117,6 @@ def printInfo(info,full,bio,file):#переделать бы
         printCustomInfo(info,full,bio,file)
 
 # Декораторы для проверок
-def check_bio(func):
-    @wraps(func)
-    async def wrapper(info, full, bio, file, *args, **kwargs):
-        if bio is None:
-            print(f"No bio for @{info.username}")
-            return
-        return await func(info, full, bio, file, *args, **kwargs)
-    return wrapper
 
 def check_channel(func):
     @wraps(func)
@@ -195,9 +159,9 @@ def check_bio_fuzzy(func):
     return wrapper
 
 # Базовая функция поиска
-async def do_search(info, full, bio, file):
-    print(f"Found match @{info.username}")
-    return {"username": info.username, "bio": bio, "full":full, "info":info, "file":file}
+async def do_search(User):
+    print(f"Found match @{User.getUsername()}")
+    return User
 
 # Функция для компоновки декораторов
 def apply_filters(filters, base_func):
@@ -210,119 +174,109 @@ def apply_filters(filters, base_func):
 
 # Регистрация декораторов
 filter_decorators = {
-    "bio": check_bio,
+    "bio": checkBio,
     "channel": check_channel,
     "photo": check_photo,
     "bio_contains": check_bio_contains,
     "bio_fuzzy": check_bio_fuzzy,
 }
 
-def removeSession(path='.'):
-    try:
-        with os.scandir(path) as entries:
-            for entry in entries:
-                if entry.is_file() and entry.name == 'bot.session':
-                    print('Removing bot.session')
-                    os.remove('bot.session')
-                    return
-
-    except FileNotFoundError:
-        print(f"Directory {path} not found")
-    except PermissionError:
-        print(f"Permission denied for directory {path}")
-    except Exception as e:
-        print(f"Error scanning directory {path}: {str(e)}")
-
-async def switchBot():
-    global tokenIndex, bot, bot_token, tokens
-    try:
-        tokenIndex += 1
-
-        if tokenIndex > len(tokens)-1:
-            print("All bots have been used!")
-            sys.exit()
-
-        print(f"Switching to bot#{tokenIndex+1}")
-     
-        await bot.disconnect()
-        os.remove('bot.session')
-        bot =  TelegramClient('bot', api_id, api_hash)
-        bot_token = tokens[tokenIndex]
-        await bot.start(bot_token=bot_token)
-    except Exception as e:
-        print(str(e))
-        if "A wait of" in str(e):
-            await switchBot()
 
 
 
-async def processUser(id,f):
-    global bot
-    try:
-        info = await asyncio.wait_for(bot.get_entity(id), timeout=timeout)
-        full = await asyncio.wait_for(bot(GetFullUserRequest(id)), timeout=timeout)
 
-        print(f"Waiting {sleep} seconds")
-        await asyncio.sleep(sleep)
-        bio = full.full_user.about
+# async def processUser(id,f):
+#     global bot
+#     try:
+#         info = await asyncio.wait_for(bot.get_entity(id), timeout=timeout)
+#         full = await asyncio.wait_for(bot(GetFullUserRequest(id)), timeout=timeout)
 
-        filtered_search = apply_filters(selectedStrategies, do_search)
-        result = await filtered_search(info, full, bio, f)
-        if result is None:
+#         print(f"Waiting {sleep} seconds") #move to the end
+#         await asyncio.sleep(sleep)
+#         bio = full.full_user.about
+
+#         filtered_search = apply_filters(selectedStrategies, do_search)
+#         result = await filtered_search(info, full, bio, f)
+#         if result is None:
+#             return
+#         printInfo(result['info'],result['full'], result['bio'], f)
+
+#     except asyncio.TimeoutError:
+#          f.write(f"Timeout for {id}\n")
+#          print(f"Timeout for {id}")
+
+#     except Exception as e:
+#         if "A wait of" in str(e):
+#             f.write(f"Error for {id}: {str(e)}\n")
+#             print(f"Error for {id}: {str(e)}")
+
+#             switchBot()
+
+#             await processUser(id,f)
+#             return
+
+#         f.write(f"Error for {id}: {str(e)}\n")
+#         print(f"Error for {id}: {str(e)}")
+
+
+class Main(BaseModel):
+
+    inputFile:TextIO = SETTINGS.getInputFile()
+    outputFile:TextIO = SETTINGS.getOutputFile()
+
+    class Config:
+        arbitrary_types_allowed = True #Разрешает IO
+
+    def __init__(self,**data):
+        super().__init__(**data)
+
+    async def main(self):
+        
+        BOT.removeSession()
+        BOT.sessionStart()
+        foundWorkingBot = False
+        while(foundWorkingBot == False):
+            try:
+                await BOT.setBot()
+            except Exception as e:
+                print(str(e))
+                if "A wait of" in str(e):
+                    await self.switchBot()
+            finally:
+                foundWorkingBot = True
+                
+        for line in self.inputFile:
+            await self.processLine(line)
+    
+    
+    async def processLine(self, line):
+        username = line.strip()
+        print(f"Processing {username}")
+    
+        if '@' not in username:
             return
-        printInfo(result['info'],result['full'], result['bio'], f)
 
-    except asyncio.TimeoutError:
-         f.write(f"Timeout for {id}\n")
-         print(f"Timeout for {id}")
+        USER = User(username = username)
 
-    except Exception as e:
-        if "A wait of" in str(e):
-            f.write(f"Error for {id}: {str(e)}\n")
-            print(f"Error for {id}: {str(e)}")
+        USER.setUserInfo(await BOT.getUser(USER,SETTINGS),) #so tight step bro
+        USER.setUserFullInfo(await BOT.getUserFull(USER,SETTINGS),) #i want to see your big biautiful interface
 
-            switchBot()
+        filtered_search = apply_filters(SETTINGS.getSearchStrategyList(), do_search)
+        result = filtered_search(USER)
+        return result
 
-            await processUser(id,f)
-            return
-
-        f.write(f"Error for {id}: {str(e)}\n")
-        print(f"Error for {id}: {str(e)}")
-
-
-removeSession()
-
-bot =  TelegramClient('bot', api_id, api_hash)
-
-
-async def main():
-    global bot
-
-    Settings = Settings(apiId,apiHash,tokens)
-
-    foundWorkingBot = False
-    while(foundWorkingBot == False):
+    async def switchBot(self):
         try:
-            await bot.start(bot_token=bot_token)
+            BOT.deleteBot()
+            BOT.sessionStart()
+            BOT.setToken(SETTINGS.getNextToken())
+            await BOT.setBot()
         except Exception as e:
             print(str(e))
             if "A wait of" in str(e):
-                await switchBot()
-        finally:
-            foundWorkingBot = True
-            
-
-    with open(fileName, 'r', encoding='utf-8') as r:
-        for line in r:
-
-            id = line.strip()
-            print(f"Processing {id}")
-
-            if '@' not in id:
-                continue
-
-            with open(resultFile, 'a', encoding='utf-8') as f:
-                await processUser(id,f)
+                await self.switchBot()
+    
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main = Main()
+    asyncio.run(main.main())
