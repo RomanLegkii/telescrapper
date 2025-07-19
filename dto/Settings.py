@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import List, TextIO
+from pathlib import Path
 import sys
 import os
 
@@ -38,8 +39,14 @@ class Settings(BaseModel):
         if self.outputType is not None and self.outputType != '':
             self.outputTypeList = self.outputType.split(',')
         
+        if self.outputType is None:
+            self.outputType = 'username_bio'
+        
         if self.searchStrategy is not None and self.searchStrategy != '':
             self.searchStrategyList = self.searchStrategy.split(',')
+        
+        self.inputFile = (Path.cwd()/self.inputFile).as_posix()
+        self.outputFile = (Path.cwd()/self.outputFile).as_posix()
 
     def getApiId(self) -> int:
         return self.apiId
@@ -50,10 +57,10 @@ class Settings(BaseModel):
     def getTokens(self) -> str:
         return self.tokens
 
-    def getFileName(self) -> str:
+    def getInputFileName(self) -> str:
         return self.inputFile
 
-    def getResultFile(self) -> str:
+    def getOutputFileName(self) -> str:
         return self.outputFile
 
     def getNeedle(self) -> str:
@@ -76,6 +83,9 @@ class Settings(BaseModel):
 
     def getSearchStrategyList(self) -> List[str]:
         return self.searchStrategyList
+
+    def getOutputType(self) -> str:
+        return self.outputType
 
     def getOutputTypeList(self) -> List[str]:
         return self.outputTypeList
@@ -104,5 +114,8 @@ class Settings(BaseModel):
     def getOutputFile(self) -> TextIO:
         path = self.outputFile
         if path not in self.IOFiles:
+            # if not os.path.exists(path):
+            #     print("Output file not found!")
+            #     sys.exit()
             self.IOFiles[path] = open(path,'a',encoding='utf-8')
         return self.IOFiles[path]

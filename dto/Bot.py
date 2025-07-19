@@ -26,11 +26,16 @@ class Bot(BaseModel):
         #check for incorrect type
 
     def sessionStart(self) -> TelegramClient:
+        if os.path.exists('bot.session'):
+            self.removeSession()
         self.bot = TelegramClient('bot', self.apiId, self.apiHash)
     
     async def setBot(self):
         await self.bot.start(bot_token = self.botToken)
     
+    async def disconnectBot(self):
+        await self.bot.disconnect()
+
     async def deleteBot(self):
         await self.bot.disconnect()
         os.remove('bot.session')
