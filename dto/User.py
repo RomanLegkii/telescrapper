@@ -13,7 +13,7 @@ class User(BaseModel):
 
     def __init__(self,**data):
         super().__init__(**data)
-    
+
     def getUsername(self):
         return self.username
     
@@ -33,3 +33,5 @@ class User(BaseModel):
         self.full = UserFullInfo
         self.bio = self.full.full_user.about
 
+    def stringify(self):
+        return (f"Username: {self.username} info: {self.info} full:{self.full} \n")

@@ -7,7 +7,11 @@ from functools import wraps
 import asyncio
 import os
 import sys
-import decorators.checkBio as checkBio 
+from decorators.checkBio import check_bio as checkBio 
+from decorators.checkBioFuzzy import  checkBioFuzzy 
+from decorators.checkBioContains import  checkBioContains 
+from decorators.checkPhoto import  checkPhoto 
+from decorators.checkChannel import  checkChannel 
 from dotenv import load_dotenv
 from dto.Settings import Settings
 from dto.Bot import Bot
@@ -116,49 +120,7 @@ def printInfo(User:User):#переделать бы
     else:
         printCustomInfo(info,full,bio,file)
 
-# Декораторы для проверок
-
-def check_channel(func):
-    @wraps(func)
-    async def wrapper(info, full, bio, file, *args, **kwargs):
-        if full.full_user.personal_channel_id is None:
-            print(f"No channel for @{info.username}")
-            return
-        return await func(info, full, bio, file, *args, **kwargs)
-    return wrapper
-
-def check_photo(func):
-    @wraps(func)
-    async def wrapper(info, full, bio, file, *args, **kwargs):
-        if info.photo is None:
-            print(f"No photo for @{info.username}")
-            return
-        return await func(info, full, bio, file, *args, **kwargs)
-    return wrapper
-
-def check_bio_contains(func):
-    @wraps(func)
-    async def wrapper(info, full, bio, file, *args, **kwargs):
-        if bio is None or needle.lower() not in bio.lower():
-            print(f"Needle or bio wasn't found for @{info.username}")
-            return
-        return await func(info, full, bio, file, *args, **kwargs)
-    return wrapper
-
-def check_bio_fuzzy(func):
-    @wraps(func)
-    async def wrapper(info, full, bio, file, *args, **kwargs):
-        if bio is None:
-             print(f"No bio for @{info.username}")
-             return
-        ratio = fuzz.ratio(needle.lower(), bio.lower())
-        print(f"Similarity for @{info.username}: {ratio}")
-        if ratio < minimum:
-            return
-        return await func(info, full, bio, file, *args, **kwargs)
-    return wrapper
-
-# Базовая функция поиска
+# Base
 async def do_search(User):
     print(f"Found match @{User.getUsername()}")
     return User
@@ -175,10 +137,10 @@ def apply_filters(filters, base_func):
 # Регистрация декораторов
 filter_decorators = {
     "bio": checkBio,
-    "channel": check_channel,
-    "photo": check_photo,
-    "bio_contains": check_bio_contains,
-    "bio_fuzzy": check_bio_fuzzy,
+    "channel": checkChannel,
+    "photo": checkPhoto,
+    "bio_contains": checkBioContains,
+    "bio_fuzzy": checkBioFuzzy,
 }
 
 
@@ -259,15 +221,18 @@ class Main(BaseModel):
         USER = User(username = username)
 
         USER.setUserInfo(await BOT.getUser(USER,SETTINGS),) #so tight step bro
-        USER.setUserFullInfo(await BOT.getUserFull(USER,SETTINGS),) #i want to see your big biautiful interface
+        USER.setUserFullInfo(await BOT.getUserFull(USER,SETTINGS)) #i want to see your big biautiful interface
+
+        await asyncio.sleep(SETTINGS.getSleep())
 
         filtered_search = apply_filters(SETTINGS.getSearchStrategyList(), do_search)
-        result = filtered_search(USER)
-        return result
+        result = await filtered_search(USER,SETTINGS)
+        if result is not None:
+            printInfo(result)
 
     async def switchBot(self):
         try:
-            BOT.deleteBot()
+            await BOT.deleteBot()
             BOT.sessionStart()
             BOT.setToken(SETTINGS.getNextToken())
             await BOT.setBot()
