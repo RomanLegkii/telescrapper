@@ -143,5 +143,4 @@ class Main():
     
 
 if __name__ == '__main__':
-    main = Main()
-    asyncio.run(main.main())
+    asyncio.run(Main().main())
