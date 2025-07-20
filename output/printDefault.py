@@ -1,15 +1,14 @@
-from dto import User as UserClass
-from dto import Settings
+from dto.User import User as UserClass
+from dto.Settings import Settings
 
 class printDefault:
-    @staticmethod
     def doPrint(User:UserClass, Settings:Settings):
+        file = Settings.getOutputFile()
         try:
-            file = Settings.getOutputFile()
+            # with Settings.getOutputFile() as file:
             file.write(f"Username: {User.getUsername() or 'None'}\t")
-            Settings.getOutputFile().write(f"Bio: {User.getBio() or 'None'}\n")
-            Settings.getOutputFile().write('123')
+            file.write(f"Bio: {User.getBio() or 'None'}\n")
             print(f"Data for {User.getUsername()} saved to {Settings.getOutputFileName()}")
         except Exception as e:
             print(f"Error for: {User.getUsername() or 'None'}: {str(e)} \n")
-            Settings.getOutputFile().write(f"Error for: {User.getUsername() or 'None'}: {str(e)} \n")
+            file.write(f"Error for: {User.getUsername() or 'None'}: {str(e)} \n")

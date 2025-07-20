@@ -111,11 +111,20 @@ class Settings(BaseModel):
             self.IOFiles[path] = open(path,'r',encoding='utf-8')
         return self.IOFiles[path]
 
-    def getOutputFile(self) -> TextIO:
-        path = self.outputFile
-        if path not in self.IOFiles:
-            # if not os.path.exists(path):
-            #     print("Output file not found!")
-            #     sys.exit()
-            self.IOFiles[path] = open(path,'a',encoding='utf-8')
-        return self.IOFiles[path]
+    def getOutputFile(self):
+        try:
+            path = self.outputFile
+            if path not in self.IOFiles:
+                self.IOFiles[path] = open(path,'a',encoding='utf-8')
+            return self.IOFiles[path]
+        except Exception as e:
+            print(str(e))
+    
+    def closeOutputFile(self):
+        try:
+            path = self.outputFile
+            if path in self.IOFiles:
+                self.IOFiles[path].close()
+                del self.IOFiles[path]
+        except Exception as e:
+            print(str(e))

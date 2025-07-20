@@ -1,6 +1,6 @@
 from functools import wraps
-from dto import User as UserClass
-from dto import Settings
+from dto.User import User as UserClass
+from dto.Settings import Settings
 
 def checkBio(func):
     @wraps(func)

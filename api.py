@@ -1,9 +1,4 @@
 #di
-from pydantic import BaseModel
-from telethon import TelegramClient
-from telethon.tl.functions.users import GetFullUserRequest
-from fuzzywuzzy import fuzz
-from functools import wraps
 import asyncio
 import os
 import sys
@@ -46,87 +41,9 @@ BOT =  Bot(
     apiHash = SETTINGS.getApiHash()
 )
 
-print(SETTINGS.getOutputTypeList())
-
-
-# def printCustomInfo(info,full,bio,file):
-#     global outputType
-
-#     if type(outputType) == str:
-#         outputType = [outputType]
-
-#     for string in outputType:
-#         cl, obj = string.split(':')
-
-#         target_obj = locals().get(cl)
-#         if target_obj is None:
-#             raise ValueError(f"Объект {cl} не найден")
-
-#         objects = obj.split('.')
-#         for objec in objects:
-#             target_obj = getattr(target_obj,objec)
-
-#         if type(target_obj) == str or type(target_obj) == int:
-#             file.write(f"{obj}: {target_obj}\t")
-#         else: 
-#             file.write(f"{obj}: {target_obj.stringify()}\t")
-#     file.write("\n")
-#     print(f"Custom data for @{info.username or info.id} saved to {resultFile}")
-
-
-# def printInfo(User:User):#переделать бы
-#     info = User.getUserInfo()
-#     full = User.getUserFullInfo()
-#     bio = User.getBio()
-#     file = SETTINGS.getOutputFile()
-#     print(User.stringify())
-#     file.write('oop hustla')
-#     sys.exit()
-#     global outputType
-#     if outputType == 'id_name_username_bio':
-#         extra = {}
-#         if hasattr(full.full_user,'personal_channel_id') and full.full_user.personal_channel_id is not None:
-#             extra['channel_id'] = full.full_user.personal_channel_id
-#         if hasattr(info,'photo') and info.photo is not None:
-#             extra['photo'] = info.photo
-
-#         if extra is not None:
-#             keys = extra.keys()
-#         try:
-#             file.write(f"ID: {info.id}\t")
-#             file.write(f"Name: {info.first_name or 'None'} {info.last_name or 'None'}\t")
-#             file.write(f"Username: @{info.username or 'None'}\t")
-#             file.write(f"Bio: {bio or 'None'}\t")
-#             if 'keys' in locals():
-#                 for key in keys:
-#                     file.write(f"{key}: {extra[key]}\t")
-#             file.write("\n")
-#             print(f"Data for @{info.username or info.id} saved to {resultFile}")
-      
-#         except Exception as e:
-#             file.write(f"Error for @{info.username or info.id}: {str(e)}\n")
-#             print(f"Error for @{info.username or info.id}: {str(e)}")
-#     elif outputType == 'raw':
-#         try:
-#             file.write(f"info: {info.stringify()}\n")
-#             file.write(f"full: {full.stringify()}\n")
-#         except Exception as e:
-#             file.write(f"Error for @{info.username or info.id}: {str(e)}\n")
-#             print(f"Error for @{info.username or info.id}: {str(e)}")
-#     elif outputType == '' or outputType is None:
-#         try:
-#             file.write(f"Username: @{info.username or 'None'}\t")
-#             file.write(f"Bio: {bio or 'None'}\n")
-#             print(f"Data for @{info.username or info.id} saved to {resultFile}")
-#         except Exception as e:
-#             file.write(f"Error for @{info.username or info.id}: {str(e)}\n")
-#             print(f"Error for @{info.username or info.id}: {str(e)}")
-#     else:
-#         printCustomInfo(info,full,bio,file)
-
 # Base
 async def do_search(User:User, Settings:Settings):
-    print(f"Found match @{User.getUsername()}")
+    print(f"Found match {User.getUsername()}")
     return User
 
 # Функция для компоновки декораторов
@@ -147,42 +64,36 @@ filter_decorators = {
     "bio_fuzzy": checkBioFuzzy,
 }
 
+# Регистрация типов вывода
 printTypes = {
     "username_bio": printDefault,
     "id_name_username_bio": printId,
     "raw": printRaw,
 }
+if SETTINGS.getOutputType() not in printTypes:
+    printTypes[SETTINGS.getOutputType()] = printCustom
 
-class Main(BaseModel):
+
+class Main():
 
     inputFile:TextIO = SETTINGS.getInputFile()
-
-    class Config:
-        arbitrary_types_allowed = True #Разрешает IO
-
-    def __init__(self,**data):
-        super().__init__(**data)
 
     async def main(self):
         global BOT
         
-        BOT.sessionStart()
-        foundWorkingBot = False
-        while(foundWorkingBot == False):
-            try:
-                await BOT.setBot()
-            except Exception as e:
-                print(str(e))
-                if "A wait of" in str(e):
-                    await self.switchBot()
-            finally:
-                foundWorkingBot = True
+        try:
+            BOT.sessionStart()
+            await BOT.setBot()
+        except Exception as e:
+            print(str(e))
+            if "A wait of" in str(e):
+                await self.switchBot()
                 
         for line in self.inputFile:
             await self.processLine(line)
     
     
-    async def processLine(self, line):
+    async def processLine(self, line:str):
         try:
             username = line.strip()
             print(f"Processing {username}")
@@ -192,7 +103,7 @@ class Main(BaseModel):
          
             USER = User(username = username)
          
-            USER.setUserInfo(await BOT.getUser(USER,SETTINGS),) #so tight step bro
+            USER.setUserInfo(await BOT.getUser(USER,SETTINGS)) #so tight step bro
             USER.setUserFullInfo(await BOT.getUserFull(USER,SETTINGS)) #i want to see your big biautiful interface
          
             await asyncio.sleep(SETTINGS.getSleep())
@@ -202,20 +113,21 @@ class Main(BaseModel):
 
             if result is not None:
 
-                printing = printTypes[SETTINGS.getOutputType()]
                 printTypes[SETTINGS.getOutputType()].doPrint(result, SETTINGS)
 
         except asyncio.TimeoutError:
-            SETTINGS.getOutputFile().write(f"Timeout for {id}\n")
-            print(f"Timeout for {id}")
+            SETTINGS.getOutputFile().write(f"Timeout for {USER.getUsername()}\n")
+            print(f"Timeout for {USER.getUsername()}")
 
         except Exception as e:
-            SETTINGS.getOutputFile().write(f"Error for {id}: {str(e)}\n")
-            print(f"Error for {id}: {str(e)}")
+            SETTINGS.getOutputFile().write(f"Error for {USER.getUsername()}: {str(e)}\n")
+            print(f"Error for {USER.getUsername()}: {str(e)}")
 
             if "A wait of" in str(e):
                 self.switchBot()
                 self.processLine(line)
+
+        SETTINGS.closeOutputFile() #Если не закрыть - запись не произойдет 
 
 
     async def switchBot(self):
