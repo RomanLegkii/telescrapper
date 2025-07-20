@@ -8,7 +8,7 @@ def checkBioFuzzy(func):
     @wraps(func)
     async def wrapper(User:UserClass, Settings:Settings, *args, **kwargs):
         if User.getBio() is None:
-             print(f"No bio for @{User.getUsername()}")
+             print(f"No bio for {User.getUsername()}")
              return
         ratio = fuzz.ratio(Settings.getNeedle().lower(), User.getBio().lower())
         print(f"Similarity for {User.getUsername()}: {ratio}")

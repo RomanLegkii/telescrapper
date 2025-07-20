@@ -124,8 +124,8 @@ class Main():
             print(f"Error for {USER.getUsername()}: {str(e)}")
 
             if "A wait of" in str(e):
-                self.switchBot()
-                self.processLine(line)
+                await self.switchBot()
+                await self.processLine(line)
 
         SETTINGS.closeOutputFile() #Если не закрыть - запись не произойдет 
 

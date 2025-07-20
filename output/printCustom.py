@@ -7,7 +7,7 @@ class printCustom:
         try:
 
             outputType = Settings.getOutputTypeList()
-            info = User.getUserInfo()
+            info = User.getUserInfo()   #нужны для locals().get(cl)
             full = User.getUserFullInfo()
 
             for string in outputType:
@@ -21,7 +21,8 @@ class printCustom:
                 for objec in objects:
                     target_obj = getattr(target_obj,objec)
 
-                if type(target_obj) == str or type(target_obj) == int:
+                stringTypes = [int,str]
+                if type(target_obj) in stringTypes or target_obj is None:
                     Settings.getOutputFile().write(f"{obj}: {target_obj}\t")
                 else: 
                     Settings.getOutputFile().write(f"{obj}: {target_obj.stringify()}\t")
