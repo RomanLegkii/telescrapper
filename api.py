@@ -78,7 +78,7 @@ class Main():
     async def processLine(self, line:str):
         try:
             username = line.strip()
-            print(f"Processing {username}")
+            print(f"\nProcessing {username}")
          
             if '@' not in username:
                 return
