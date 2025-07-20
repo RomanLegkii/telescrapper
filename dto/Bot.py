@@ -23,7 +23,6 @@ class Bot(BaseModel):
 
     def setToken(self,token:str):
         self.botToken = token
-        #check for incorrect type
 
     def sessionStart(self) -> TelegramClient:
         if os.path.exists('bot.session'):
