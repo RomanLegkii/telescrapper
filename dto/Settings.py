@@ -93,7 +93,7 @@ class Settings(BaseModel):
     def getNextToken(self) -> str:
         self.tokenIndex += 1
 
-        if self.tokenIndex > len(self.tokenList):
+        if self.tokenIndex+1 > len(self.tokenList):
             print("All bots have been used!")
             sys.exit()
 
