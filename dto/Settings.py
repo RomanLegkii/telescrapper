@@ -23,6 +23,7 @@ class Settings(BaseModel):
     searchStrategy:str|None
     searchStrategyList:List[str] = []
     outputTypeList:List[str] = []
+    printErrors:bool|None = False
 
     #Singleton для работы с файлами
     IOFiles:dict = {} 
@@ -90,6 +91,9 @@ class Settings(BaseModel):
     def getOutputTypeList(self) -> List[str]:
         return self.outputTypeList
     
+    def getPrintErrors(self) -> bool:
+        return self.printErrors
+    
     def getNextToken(self) -> str:
         self.tokenIndex += 1
 
@@ -111,7 +115,7 @@ class Settings(BaseModel):
             self.IOFiles[path] = open(path,'r',encoding='utf-8')
         return self.IOFiles[path]
 
-    def getOutputFile(self):
+    def getOutputFile(self) -> TextIO:
         try:
             path = self.outputFile
             if path not in self.IOFiles:

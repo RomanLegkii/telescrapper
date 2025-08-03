@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from dto.Settings import Settings
 from dto.Bot import Bot
 from dto.User import User
+from dto.ErrorLog import ErrorLog
 from typing import TextIO
 from decorators.FilterDecoratos import Filter
 from output.printCustom import printCustom
@@ -27,7 +28,8 @@ SETTINGS = Settings(
     timeout = os.getenv('TIMEOUT_LIMIT'),
     sleep = os.getenv('SLEEP_TIME'),
     outputType = os.getenv('OUTPUT_TYPE'),
-    searchStrategy = os.getenv('SEARCH_STRATEGY')
+    searchStrategy = os.getenv('SEARCH_STRATEGY'),
+    printErrors = os.getenv('PRINT_ERRORS')
 )
 
 BOT =  Bot(
@@ -99,16 +101,15 @@ class Main():
                     self.printTypes[SETTINGS.getOutputType()].doPrint(result, SETTINGS)
                     print(f"Data for {result.getUsername()} saved to {SETTINGS.getOutputFileName()}")
                 except Exception as e:
-                    SETTINGS.getOutputFile().write(f"Error for: {result.getUsername() or 'None'}: {str(e)} \t")
+                    ErrorLog.doLog(SETTINGS,e,f"Error for {USER.getUsername()}:")
                     print(f"Error for: {result.getUsername() or 'None'}: {str(e)} \n")
-                SETTINGS.getOutputFile().write('\n')
 
         except asyncio.TimeoutError:
             SETTINGS.getOutputFile().write(f"Timeout for {USER.getUsername()}\n")
             print(f"Timeout for {USER.getUsername()}")
 
         except Exception as e:
-            SETTINGS.getOutputFile().write(f"Error for {USER.getUsername()}: {str(e)}\n")
+            ErrorLog.doLog(SETTINGS,e,f"Error for {USER.getUsername()}:")
             print(f"Error for {USER.getUsername()}: {str(e)}")
 
             if "A wait of" in str(e):

@@ -8,4 +8,4 @@ class printId:
         file.write(f"id: {User.getUserInfo().id or 'None'}\t")
         file.write(f"Name: {User.getUserInfo().first_name or 'None'} {User.getUserInfo().last_name or 'None'}\t")
         file.write(f"Username: {User.getUsername() or 'None'}\t")
-        file.write(f"Bio: {User.getUserFullInfo().full_user.about or 'None'}\t")
+        file.write(f"Bio: {User.getUserFullInfo().full_user.about or 'None'}\n")

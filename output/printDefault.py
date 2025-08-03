@@ -5,4 +5,4 @@ class printDefault:
     def doPrint(User:UserClass, Settings:Settings):
         file = Settings.getOutputFile()
         file.write(f"Username: {User.getUsername() or 'None'}\t")
-        file.write(f"Bio: {User.getBio() or 'None'}\t")
+        file.write(f"Bio: {User.getBio() or 'None'}\n")

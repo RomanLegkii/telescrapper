@@ -32,6 +32,6 @@ class printCustom:
 
             stringTypes = [int,str]
             if type(target_obj) in stringTypes or target_obj is None:
-                Settings.getOutputFile().write(f"{obj}: {target_obj}\t")
+                Settings.getOutputFile().write(f"{obj}: {target_obj}\n")
             else: 
-                Settings.getOutputFile().write(f"{obj}: {target_obj.stringify()}\t")
+                Settings.getOutputFile().write(f"{obj}: {target_obj.stringify()}\n")
