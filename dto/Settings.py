@@ -20,6 +20,7 @@ class Settings(BaseModel):
     timeout:int
     sleep:int
     outputType:str|None
+    newLineSign:str|None
     searchStrategy:str|None
     searchStrategyList:List[str] = []
     outputTypeList:List[str] = []
@@ -132,3 +133,9 @@ class Settings(BaseModel):
                 del self.IOFiles[path]
         except Exception as e:
             print(str(e))
+    
+    def checkForSign(self,username) -> bool:
+        if self.newLineSign is not None and self.newLineSign not in username[0]:
+            print(f"Skipping {username}")
+            return False
+        return True

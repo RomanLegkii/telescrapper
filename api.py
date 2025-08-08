@@ -29,7 +29,8 @@ SETTINGS = Settings(
     sleep = os.getenv('SLEEP_TIME'),
     outputType = os.getenv('OUTPUT_TYPE'),
     searchStrategy = os.getenv('SEARCH_STRATEGY'),
-    printErrors = os.getenv('PRINT_ERRORS')
+    printErrors = os.getenv('PRINT_ERRORS'),
+    newLineSign = os.getenv('NEW_LINE_SIGN')
 )
 
 BOT =  Bot(
@@ -78,12 +79,14 @@ class Main():
     
     
     async def processLine(self, line:str):
-        try:
-            username = line.strip()
-            print(f"\nProcessing {username}")
+
+        username = line.strip()
+        print(f"\nProcessing {username}")
          
-            if '@' not in username:
-                return
+        if SETTINGS.checkForSign(username) is False:
+            return
+
+        try:
          
             USER = User(username = username)
          
